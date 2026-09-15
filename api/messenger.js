@@ -62,7 +62,13 @@ export default async function handler(req, res) {
       } catch (err) {
         console.error("[messenger] Үйл явдал боловсруулахад алдаа:", err);
         if (event.sender?.id) {
-          await sendText(event.sender.id, ERROR_REPLY).catch(() => {});
+          // DEBUG_ERRORS=1 үед жинхэнэ алдааг Messenger дээр шууд харуулна.
+          // Тохиргоо дуусмагц энэ хувьсагчийг УСТГААРАЙ.
+          const reply =
+            process.env.DEBUG_ERRORS === "1"
+              ? `${ERROR_REPLY}\n\n[debug] ${err.name}: ${err.message}`
+              : ERROR_REPLY;
+          await sendText(event.sender.id, reply).catch(() => {});
         }
       }
     }
