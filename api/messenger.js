@@ -36,14 +36,21 @@ export default async function handler(req, res) {
   // ── Мессеж хүлээн авах ──
   let body;
   try {
-    const raw = await readRawBody(req);
-    const check = verifySignature(raw, req.headers["x-hub-signature-256"]);
+    const { raw, exact } = await readRawBody(req);
+    const check = verifySignature(raw, req.headers["x-hub-signature-256"], {
+      exact,
+    });
     if (!check.ok) {
-      console.warn("[messenger] Гарын үсэг таарсангүй.");
+      console.warn(
+        `[messenger] Гарын үсэг таарсангүй — ${check.reason}. ` +
+          `(түүхий=${exact}, урт=${raw.length})`,
+      );
       return res.status(403).send("Invalid signature");
     }
     if (check.skipped) {
       console.warn("[messenger] FB_APP_SECRET тавиагүй — гарын үсэг шалгасангүй.");
+    } else if (check.variant === "escaped") {
+      console.log("[messenger] Гарын үсэг \\uXXXX хувилбараар таарлаа.");
     }
     body = JSON.parse(raw);
   } catch (err) {

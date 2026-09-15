@@ -32,7 +32,7 @@ export default async function handler(req, res) {
 
   let update;
   try {
-    update = JSON.parse(await readRawBody(req));
+    update = JSON.parse((await readRawBody(req)).raw);
   } catch (err) {
     console.error("[telegram] Биеийг уншиж чадсангүй:", err);
     return res.status(400).send("Bad Request");
