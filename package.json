@@ -1,0 +1,19 @@
+{
+  "name": "korean-chatbot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Солонгос хэлний сургалтын Facebook Messenger чатбот + Telegram админ AI",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "seed": "node --env-file=.env scripts/seed.js",
+    "kb": "node --env-file=.env scripts/show-kb.js",
+    "telegram:webhook": "node --env-file=.env scripts/set-telegram-webhook.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.125.0",
+    "@upstash/redis": "^1.38.4"
+  }
+}
