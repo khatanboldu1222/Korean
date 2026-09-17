@@ -1,7 +1,7 @@
 import { env } from "../lib/env.js";
 import { readRawBody } from "../lib/raw-body.js";
 import { verifySignature, sendText, sendAction, getProfile } from "../lib/fb.js";
-import { claimMessage } from "../lib/store.js";
+import { claimMessage, touchLastSeen } from "../lib/store.js";
 import { handleCustomerMessage } from "../lib/agent-customer.js";
 
 // Гарын үсэг шалгахын тулд түүхий бие хэрэгтэй.
@@ -113,6 +113,9 @@ async function handleEvent(event) {
   // Facebook удаашрахад ижил мессежийг давхар илгээдэг.
   const fresh = await claimMessage(event.message?.mid ?? `${psid}:${event.timestamp}`);
   if (!fresh) return;
+
+  // 24 цагийн цонхыг тооцоолохын тулд хамгийн сүүлд бичсэн хугацааг хадгална.
+  await touchLastSeen(psid);
 
   await sendAction(psid, "mark_seen");
   await sendAction(psid, "typing_on");
