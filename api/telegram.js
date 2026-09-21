@@ -1,6 +1,6 @@
 import { env } from "../lib/env.js";
 import { readRawBody } from "../lib/raw-body.js";
-import { tgSend, tgTyping, isAdmin } from "../lib/tg.js";
+import { tgSend, tgTyping, isAdmin, botUsername } from "../lib/tg.js";
 import { claimMessage } from "../lib/store.js";
 import { handleAdminMessage, resetAdminConversation } from "../lib/agent-admin.js";
 
@@ -54,25 +54,63 @@ export default async function handler(req, res) {
 async function handleUpdate(update) {
   const message = update.message ?? update.edited_message;
   const chatId = message?.chat?.id;
-  const text = message?.text?.trim();
+  let text = message?.text?.trim();
   if (!chatId || !text) return;
 
   if (!(await claimMessage(`tg:${update.update_id}`))) return;
 
+  const chatType = message.chat?.type ?? "private";
+  const inGroup = chatType === "group" || chatType === "supergroup";
+  const username = await botUsername();
+
+  // Бүлэгт тушаал "/start@BotName" хэлбэрээр ирдэг — нэрийг нь тайрна.
+  if (username && text.startsWith("/")) {
+    text = text.replace(
+      new RegExp(`^(/[A-Za-z0-9_]+)@${username}\\b`, "i"),
+      "$1",
+    );
+  }
+
+  if (inGroup) {
+    // Бүлгийн бүх яриаг сонсвол бот хүн бүрт хариулж шуугиан үүсгэнэ.
+    // Зөвхөн нэрээр нь дуудсан, хариу бичсэн, эсвэл тушаал өгсөн үед л
+    // хариулна.
+    const mentioned =
+      Boolean(username) && new RegExp(`@${username}\\b`, "i").test(text);
+    const repliedToBot =
+      message.reply_to_message?.from?.username?.toLowerCase() ===
+      username.toLowerCase();
+
+    if (!mentioned && !repliedToBot && !text.startsWith("/")) return;
+
+    if (mentioned) {
+      text = text.replace(new RegExp(`@${username}\\b`, "gi"), "").trim();
+      if (!text) text = "Сайн уу";
+    }
+  }
+
   if (!isAdmin(chatId)) {
     await tgSend(
       chatId,
-      "Танд энэ ботыг ашиглах эрх алга байна.\n\n" +
-        `Таны chat id: ${chatId}\n` +
-        "Эрх авах бол энэ дугаарыг хуудасны эзэнд өгч, TELEGRAM_ADMIN_CHAT_IDS " +
-        "хувьсагчид нэмүүлнэ үү.",
+      inGroup
+        ? "Энэ бүлэгт ажиллах эрх надад алга байна.\n\n" +
+            `Бүлгийн id: ${chatId}\n` +
+            "Энэ дугаарыг TELEGRAM_ADMIN_CHAT_IDS хувьсагчид нэмүүлнэ үү."
+        : "Танд энэ ботыг ашиглах эрх алга байна.\n\n" +
+            `Таны chat id: ${chatId}\n` +
+            "Эрх авах бол энэ дугаарыг хуудасны эзэнд өгч, " +
+            "TELEGRAM_ADMIN_CHAT_IDS хувьсагчид нэмүүлнэ үү.",
     );
     return;
   }
 
-  const adminName = [message.from?.first_name, message.from?.last_name]
+  const sender = [message.from?.first_name, message.from?.last_name]
     .filter(Boolean)
     .join(" ");
+  // Бүлэгт олон хүн нэг ярианд бичих тул AI-д хэн бичсэнийг мэдэгдэнэ.
+  const adminName = inGroup
+    ? `${sender} (бүлгийн чат — өөр хүмүүс ч энд бичиж болно)`
+    : sender;
 
   if (text === "/start" || text === "/help") {
     await tgSend(chatId, WELCOME);
