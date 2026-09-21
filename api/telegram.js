@@ -71,22 +71,18 @@ async function handleUpdate(update) {
     );
   }
 
-  if (inGroup) {
-    // Бүлгийн бүх яриаг сонсвол бот хүн бүрт хариулж шуугиан үүсгэнэ.
-    // Зөвхөн нэрээр нь дуудсан, хариу бичсэн, эсвэл тушаал өгсөн үед л
-    // хариулна.
-    const mentioned =
-      Boolean(username) && new RegExp(`@${username}\\b`, "i").test(text);
-    const repliedToBot =
-      message.reply_to_message?.from?.username?.toLowerCase() ===
-      username.toLowerCase();
+  // Өөр ботын мессежид хариулахгүй — хоорондоо давталт үүсгэхээс сэргийлнэ.
+  if (message.from?.is_bot) return;
 
-    if (!mentioned && !repliedToBot && !text.startsWith("/")) return;
-
-    if (mentioned) {
-      text = text.replace(new RegExp(`@${username}\\b`, "gi"), "").trim();
-      if (!text) text = "Сайн уу";
-    }
+  // Бүлэгт хувийн чаттай ЯГ ИЖИЛ ажиллана — бүх мессежид хариулна,
+  // нэрээр нь дуудах шаардлагагүй. Үүний тулд BotFather дээр privacy
+  // mode УНТРААСАН байх ёстой, эс бөгөөс Telegram жирийн мессежийг
+  // ботод дамжуулдаггүй.
+  //
+  // Хэн нэгэн зуршлаараа нэрээр нь дуудвал @нэрийг нь текстээс тайрна.
+  if (inGroup && username) {
+    text = text.replace(new RegExp(`@${username}\\b`, "gi"), "").trim();
+    if (!text) text = "Сайн уу";
   }
 
   if (!isAdmin(chatId)) {
